@@ -1,24 +1,35 @@
-TEST?=$$(go list ./... | grep -v 'vendor')
-NAME=ionosdeveloper
-BINARY=terraform-provider-${NAME}
-VERSION=0.1
-OS_ARCH=linux_amd64
+TEST?=$$(go list ./... |grep -v 'vendor')
+GOFMT_FILES?=$$(find . -name '*.go' |grep -v vendor)
 
-default: install
+default: build
 
-build:
-	go build -o ${BINARY}
+build: fmtcheck
+	go install
 
-release:
-	go build -o ./bin/${BINARY}_${VERSION}_${OS_ARCH}
-
-install: build
-	mkdir -p ~/terraform-providers/local/providers/${NAME}/${VERSION}/${OS_ARCH}
-	mv ${BINARY} ~/terraform-providers/local/providers/${NAME}/${VERSION}/${OS_ARCH}
-
-test:
+test: fmtcheck
 	go test -i $(TEST) || exit 1
-	echo $(TEST) | xargs -t -n4 go test $(TESTARGS) -timeout=30s -parallel=4
+	echo $(TEST) | \
+		xargs -t -n4 go test $(TESTARGS) -timeout=30s -parallel=4
 
-testacc:
-	TF_ACC=1 go test $(TEST) -v $(TESTARGS) -timeout 120m
+testacc: fmtcheck
+	TF_ACC=1 go test $(TEST) -v $(TESTARGS) -timeout 120m -tags $(TAGS)
+
+vet:
+	@echo "go vet ."
+	@go vet $$(go list ./... | grep -v vendor/) ; if [ $$? -eq 1 ]; then \
+		echo ""; \
+		echo "Vet found suspicious constructs. Please check the reported constructs"; \
+		echo "and fix them if necessary before submitting the code for review."; \
+		exit 1; \
+	fi
+
+fmt:
+	gofmt -w $(GOFMT_FILES)
+
+fmtcheck:
+	@sh -c "'$(CURDIR)/scripts/gofmtcheck.sh'"
+
+errcheck:
+	@sh -c "'$(CURDIR)/scripts/errcheck.sh'"
+
+.PHONY: build test testacc vet fmt fmtcheck errcheck

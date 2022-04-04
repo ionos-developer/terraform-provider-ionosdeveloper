@@ -11,13 +11,13 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
-	dns "github.com/ionos-developer/dns-sdk-go"
+	dnsSdk "github.com/ionos-developer/dns-sdk-go"
 )
 
 const apiKeyEnvVar = "IONOS_API_KEY"
 
 type SdkBundle struct {
-	DnsApiClient *dns.APIClient
+	DnsApiClient *dnsSdk.APIClient
 }
 
 // The provider meta is exported in order to be used by DiffSuppressFunc functions
@@ -82,7 +82,7 @@ func providerConfigure(d *schema.ResourceData, terraformVersion string) (interfa
 		return nil, diags
 	}
 
-	configuration := dns.NewConfiguration()
+	configuration := dnsSdk.NewConfiguration()
 	if url != "" {
 		configuration.Servers[0].URL = url
 	}
@@ -95,7 +95,7 @@ func providerConfigure(d *schema.ResourceData, terraformVersion string) (interfa
 		configuration.Debug = true
 	}
 
-	dnsApiClient := dns.NewAPIClient(configuration)
+	dnsApiClient := dnsSdk.NewAPIClient(configuration)
 
 	return SdkBundle{
 		DnsApiClient: dnsApiClient,

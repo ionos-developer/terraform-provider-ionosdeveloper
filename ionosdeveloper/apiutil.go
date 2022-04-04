@@ -5,11 +5,11 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-	sdk "github.com/ionos-developer/dns-sdk-go"
+	dnsSdk "github.com/ionos-developer/dns-sdk-go"
 )
 
 func getIndentedBody(err error) string {
-	if e, ok := interface{}(err).(*sdk.GenericOpenAPIError); ok {
+	if e, ok := interface{}(err).(*dnsSdk.GenericOpenAPIError); ok {
 		var unmarshalled []interface{}
 		if json.Unmarshal(e.Body(), &unmarshalled) == nil {
 			if body, jsonErr := json.MarshalIndent(unmarshalled, "", "    "); jsonErr == nil {
@@ -25,6 +25,6 @@ func appendError(diags diag.Diagnostics, summary string, err error) diag.Diagnos
 	return append(diags, diag.Diagnostic{
 		Severity: diag.Error,
 		Summary:  summary,
-		Detail:   fmt.Sprintf("%v\n%v\n", err, getIndentedBody(err)),
+		Detail:   fmt.Sprintf("%v\n", getIndentedBody(err)),
 	})
 }

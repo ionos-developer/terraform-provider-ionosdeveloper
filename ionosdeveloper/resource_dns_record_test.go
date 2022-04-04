@@ -1,3 +1,5 @@
+//go:build all || dns
+
 package ionosdeveloper
 
 import (
@@ -20,7 +22,7 @@ func TestAccDnsRecord_Validations(t *testing.T) {
 			},
 			{
 				Config:      invalidType,
-				ExpectError: regexp.MustCompile("Invalid record type"),
+				ExpectError: regexp.MustCompile("invalid"),
 			},
 			{
 				Config:      invalidPrio,
@@ -38,7 +40,6 @@ func TestAccDnsRecord_MX(t *testing.T) {
 			{
 				Config: mx,
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("ionosdeveloper_dns_record.r", "zone_id", testZoneId),
 					resource.TestCheckResourceAttr("ionosdeveloper_dns_record.r", "name", "test-acc."+testZoneName),
 					resource.TestCheckResourceAttr("ionosdeveloper_dns_record.r", "type", "MX"),
 					resource.TestCheckResourceAttr("ionosdeveloper_dns_record.r", "content", "a.de"),
@@ -50,7 +51,6 @@ func TestAccDnsRecord_MX(t *testing.T) {
 			{
 				Config: mx2,
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("ionosdeveloper_dns_record.r", "zone_id", testZoneId),
 					resource.TestCheckResourceAttr("ionosdeveloper_dns_record.r", "name", "test-acc."+testZoneName),
 					resource.TestCheckResourceAttr("ionosdeveloper_dns_record.r", "type", "MX"),
 					resource.TestCheckResourceAttr("ionosdeveloper_dns_record.r", "content", "new.de"),
@@ -85,7 +85,6 @@ func TestAccDnsRecord_UpdateType(t *testing.T) {
 			{
 				Config: mx,
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("ionosdeveloper_dns_record.r", "zone_id", testZoneId),
 					resource.TestCheckResourceAttr("ionosdeveloper_dns_record.r", "name", "test-acc."+testZoneName),
 					resource.TestCheckResourceAttr("ionosdeveloper_dns_record.r", "type", "MX"),
 					resource.TestCheckResourceAttr("ionosdeveloper_dns_record.r", "content", "a.de"),
@@ -98,7 +97,6 @@ func TestAccDnsRecord_UpdateType(t *testing.T) {
 				Config: txt,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					checkDifferentId("ionosdeveloper_dns_record.r", &initialId),
-					resource.TestCheckResourceAttr("ionosdeveloper_dns_record.r", "zone_id", testZoneId),
 					resource.TestCheckResourceAttr("ionosdeveloper_dns_record.r", "name", "test-acc."+testZoneName),
 					resource.TestCheckResourceAttr("ionosdeveloper_dns_record.r", "type", "TXT"),
 					resource.TestCheckResourceAttr("ionosdeveloper_dns_record.r", "content", "\"text\""),
@@ -118,7 +116,6 @@ func TestAccDnsRecord_UpdateName(t *testing.T) {
 			{
 				Config: mx,
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("ionosdeveloper_dns_record.r", "zone_id", testZoneId),
 					resource.TestCheckResourceAttr("ionosdeveloper_dns_record.r", "name", "test-acc."+testZoneName),
 					resource.TestCheckResourceAttr("ionosdeveloper_dns_record.r", "type", "MX"),
 					resource.TestCheckResourceAttr("ionosdeveloper_dns_record.r", "content", "a.de"),
@@ -130,7 +127,6 @@ func TestAccDnsRecord_UpdateName(t *testing.T) {
 				Config: mxUpdateName,
 				Check: resource.ComposeAggregateTestCheckFunc(
 					checkDifferentId("ionosdeveloper_dns_record.r", &initialId),
-					resource.TestCheckResourceAttr("ionosdeveloper_dns_record.r", "zone_id", testZoneId),
 					resource.TestCheckResourceAttr("ionosdeveloper_dns_record.r", "name", "test-acc2."+testZoneName),
 					resource.TestCheckResourceAttr("ionosdeveloper_dns_record.r", "type", "MX"),
 					resource.TestCheckResourceAttr("ionosdeveloper_dns_record.r", "content", "a.de"),
@@ -141,24 +137,25 @@ func TestAccDnsRecord_UpdateName(t *testing.T) {
 	})
 }
 
-func TestAccDnsRecord_AWithPrio(t *testing.T) {
+func TestAccDnsRecord_NormalizedName(t *testing.T) {
+	var initialId string
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: testAccProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config:      aWithPrio,
-				ExpectError: regexp.MustCompile("prio"),
-			},
-			{
-				Config: a,
+				Config: punycodeName,
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("ionosdeveloper_dns_record.r", "content", "1.1.1.1"),
+					resource.TestCheckResourceAttr("ionosdeveloper_dns_record.r", "name", "ss.test-acc."+testZoneName),
+					getCurrentId("ionosdeveloper_dns_record.r", &initialId),
 				),
 			},
 			{
-				Config:      aWithPrio,
-				ExpectError: regexp.MustCompile("prio"),
+				Config: unicodeName,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					checkSameId("ionosdeveloper_dns_record.r", &initialId),
+					resource.TestCheckResourceAttr("ionosdeveloper_dns_record.r", "name", "ss.test-acc."+testZoneName),
+				),
 			},
 		},
 	})
@@ -194,7 +191,22 @@ func checkDifferentId(n string, id *string) resource.TestCheckFunc {
 	})
 }
 
-// TODO make name TEsT-ACC
+func checkSameId(n string, id *string) resource.TestCheckFunc {
+	return resource.TestCheckFunc(func(s *terraform.State) error {
+		// find the corresponding state object
+		rs, ok := s.RootModule().Resources[n]
+		if !ok {
+			return fmt.Errorf("Not found: %s", n)
+		}
+
+		if rs.Primary.ID != *id {
+			return fmt.Errorf("The resource id changed")
+		}
+
+		return nil
+	})
+}
+
 var mx = zoneConfig(testZoneName) + `
 resource ionosdeveloper_dns_record r {
   zone_id  = data.ionosdeveloper_dns_zone.z.id
@@ -244,16 +256,6 @@ resource ionosdeveloper_dns_record r {
   ttl      = 100
 }`
 
-var aWithPrio = zoneConfig(testZoneName) + `
-resource ionosdeveloper_dns_record r {
-  zone_id  = data.ionosdeveloper_dns_zone.z.id
-  name     = "test-acc.${data.ionosdeveloper_dns_zone.z.name}"
-  type     = "A"
-  content  = "1.1.1.1"
-  ttl      = 100
-  prio     = 10
-}`
-
 var invalidTtl = zoneConfig(testZoneName) + `
 resource ionosdeveloper_dns_record r {
   zone_id  = data.ionosdeveloper_dns_zone.z.id
@@ -280,4 +282,22 @@ resource ionosdeveloper_dns_record r {
   content  = "a.de"
   ttl      = 1000
   prio     = 65536
+}`
+
+var punycodeName = zoneConfig(testZoneName) + `
+resource ionosdeveloper_dns_record r {
+  zone_id  = data.ionosdeveloper_dns_zone.z.id
+  name     = "ss.test-acc.${data.ionosdeveloper_dns_zone.z.name}"
+  type     = "a"
+  content  = "1.1.1.1"
+  ttl      = 1000
+}`
+
+var unicodeName = zoneConfig(testZoneName) + `
+resource ionosdeveloper_dns_record r {
+  zone_id  = data.ionosdeveloper_dns_zone.z.id
+  name     = "ß.test-acc.${data.ionosdeveloper_dns_zone.z.name}"
+  type     = "a"
+  content  = "1.1.1.1"
+  ttl      = 1000
 }`

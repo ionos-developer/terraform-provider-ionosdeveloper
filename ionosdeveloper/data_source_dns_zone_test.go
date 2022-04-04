@@ -1,3 +1,5 @@
+//go:build all || dns
+
 package ionosdeveloper
 
 import (
@@ -9,7 +11,6 @@ import (
 )
 
 var testZoneName = os.Getenv("TEST_DNS_ZONE_NAME")
-var testZoneId = os.Getenv("TEST_DNS_ZONE_ID")
 
 func testDnsAccPreCheck(t *testing.T) {
 	testAccPreCheck(t)
@@ -26,7 +27,7 @@ func TestAccZoneOk(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: zoneConfig(testZoneName),
-				Check:  resource.TestCheckResourceAttr("data.ionosdeveloper_dns_zone.z", "id", testZoneId),
+				Check:  resource.TestCheckResourceAttrSet("data.ionosdeveloper_dns_zone.z", "id"),
 			},
 			{
 				Config:      zoneConfig("inexistent-zone.de"),
