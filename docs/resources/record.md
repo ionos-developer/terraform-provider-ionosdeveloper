@@ -1,6 +1,6 @@
 # Resource: ionosdeveloper_dns_record
 
-Manages a DNS record.
+Provides a DNS record.
 
 ## Example usage
 
