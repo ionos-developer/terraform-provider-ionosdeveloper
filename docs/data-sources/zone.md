@@ -1,6 +1,6 @@
 # Data Source: ionosdeveloper_dns_zone
 
-`ionosdeveloper_dns_zone` provides details about a specific zone managed by Ionos DNS.
+`ionosdeveloper_dns_zone` provides details about a specific zone hosted by IONOS.
 
 ## Example usage
 
