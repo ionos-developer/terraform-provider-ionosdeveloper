@@ -1,10 +1,10 @@
 # IonosDeveloper Provider
 
-The IonosDeveloper provider gives the ability to configure DNS records using the IONOS Developer API.
+Use the IONOS Developer provider to manage your DNS configuration.
 
 Use the navigation to the left to read about the available data sources and resources.
 
-## Usage
+## Authentication and Configuration
 
 The provider needs to be configured with proper credentials before it can be used.
 
